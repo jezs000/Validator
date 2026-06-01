@@ -1,0 +1,42 @@
+2026-05-29 19:55:34,730 INFO Validator started
+2026-05-29 19:55:34,743 INFO Loaded file with 19 rows
+2026-05-29 19:55:34,744 INFO Row 1: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,744 INFO Row 2: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,744 INFO Row 3: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,744 INFO Row 4: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,745 INFO Row 5: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,745 INFO Row 6: ['Invalid ICO']
+2026-05-29 19:55:34,745 INFO Row 7: ['Invalid ICO']
+2026-05-29 19:55:34,746 INFO Row 8: ['Invalid ICO']
+2026-05-29 19:55:34,746 INFO Row 9: ['Invalid ICO']
+2026-05-29 19:55:34,746 INFO Row 10: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,746 INFO Row 11: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,747 INFO Row 12: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,747 INFO Row 13: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,747 INFO Row 14: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,747 INFO Row 15: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,747 INFO Row 16: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,748 INFO Row 17: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,748 INFO Row 18: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,748 INFO Row 19: ['Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:55:34,754 INFO Salesforce CSV exported
+2026-05-29 19:55:34,806 INFO Error XLSX exported
+2026-05-29 19:55:34,806 INFO Validation finished
+2026-05-29 19:59:51,624 INFO Validator started
+2026-05-29 19:59:51,634 INFO Loaded file with 5 rows
+2026-05-29 19:59:51,636 INFO Row 1: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:59:51,636 INFO Row 2: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:59:51,637 INFO Row 3: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:59:51,637 INFO Row 4: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:59:51,637 INFO Row 5: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 19:59:51,643 INFO Salesforce CSV exported
+2026-05-29 20:00:28,408 INFO Validator started
+2026-05-29 20:00:28,418 INFO Loaded file with 5 rows
+2026-05-29 20:00:28,419 INFO Row 1: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 20:00:28,419 INFO Row 2: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 20:00:28,419 INFO Row 3: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 20:00:28,419 INFO Row 4: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 20:00:28,420 INFO Row 5: ['Missing value: Due Date', 'Invalid Due Date', 'Invalid ICO', 'Invalid IBAN']
+2026-05-29 20:00:28,426 INFO Salesforce CSV exported
+2026-05-29 20:00:28,458 INFO Error XLSX exported
+2026-05-29 20:00:28,458 INFO Validation finished

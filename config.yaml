@@ -1,0 +1,30 @@
+input_file: input/export.xlsx
+
+output:
+  valid_csv: output/salesforce_import.csv
+  error_xlsx: output/invoice_errors.xlsx
+
+required_columns:
+  - Invoice Number
+  - Issue Date
+  - Due Date
+  - Vendor Name
+  - Vendor Company ID
+  - Total Amount
+  - Currency
+
+valid_currencies:
+  - CZK
+  - EUR
+  - USD
+
+salesforce_mapping:
+  Invoice Number: Invoice_Number__c
+  Issue Date: Issue_Date__c
+  Due Date: Due_Date__c
+  Vendor Name: Vendor_Name__c
+  Vendor Company ID: Vendor_ICO__c
+  Vendor VAT Number: Vendor_DIC__c
+  Total Amount: Amount__c
+  Currency: CurrencyIsoCode
+  IBAN: IBAN__c
