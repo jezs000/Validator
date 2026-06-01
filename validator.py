@@ -18,28 +18,7 @@ def validate_file(
     output_dir: str,
     config_path: str = "config.yaml"
 ):
-    """
-    Validace OCR exportu.
 
-    Parameters
-    ----------
-    input_path : str
-        cesta k XLSX
-
-    output_dir : str
-        kam uložit výsledky
-
-    config_path : str
-        cesta ke konfiguraci
-
-    Returns
-    -------
-    dict
-    """
-
-    # --------------------------------------------------
-    # CONFIG
-    # --------------------------------------------------
 
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -54,9 +33,7 @@ def validate_file(
     valid_csv = output_dir / "salesforce_import.csv"
     error_xlsx = output_dir / "invoice_errors.xlsx"
 
-    # --------------------------------------------------
-    # HELPERS
-    # --------------------------------------------------
+
 
     def is_empty(value):
         return pd.isna(value) or str(value).strip() == ""
@@ -137,15 +114,11 @@ def validate_file(
 
         return expected == digits[7]
 
-    # --------------------------------------------------
-    # LOAD
-    # --------------------------------------------------
+
 
     df = pd.read_excel(input_path)
 
-    # --------------------------------------------------
-    # VALIDATE COLUMNS
-    # --------------------------------------------------
+
 
     missing_columns = [
         c
@@ -158,9 +131,7 @@ def validate_file(
             f"Missing columns: {missing_columns}"
         )
 
-    # --------------------------------------------------
-    # ROW VALIDATION
-    # --------------------------------------------------
+
 
     statuses = []
     errors = []
@@ -169,7 +140,6 @@ def validate_file(
 
         row_errors = []
 
-        # required fields
 
         for col in required_columns:
 
@@ -178,7 +148,6 @@ def validate_file(
                     f"Missing: {col}"
                 )
 
-        # dates
 
         if not is_valid_date(row["Issue Date"]):
             row_errors.append(
@@ -190,7 +159,6 @@ def validate_file(
                 "Invalid Due Date"
             )
 
-        # ICO
 
         if not is_valid_ico(
             row["Vendor Company ID"]
@@ -199,7 +167,6 @@ def validate_file(
                 "Invalid ICO"
             )
 
-        # DIC
 
         if (
             "Vendor VAT Number" in df.columns
@@ -215,8 +182,6 @@ def validate_file(
                     "Invalid DIC"
                 )
 
-        # amount
-
         if not is_valid_amount(
             row["Total Amount"]
         ):
@@ -224,7 +189,6 @@ def validate_file(
                 "Invalid Amount"
             )
 
-        # currency
 
         if not is_valid_currency(
             row["Currency"]
@@ -233,7 +197,7 @@ def validate_file(
                 "Invalid Currency"
             )
 
-        # iban
+
 
         if (
             "IBAN" in df.columns
@@ -257,16 +221,12 @@ def validate_file(
             "; ".join(row_errors)
         )
 
-    # --------------------------------------------------
-    # RESULT COLUMNS
-    # --------------------------------------------------
+
 
     df["Validation Status"] = statuses
     df["Validation Errors"] = errors
 
-    # --------------------------------------------------
-    # SPLIT
-    # --------------------------------------------------
+
 
     valid_df = df[
         df["Validation Status"] == "VALID"
@@ -276,9 +236,7 @@ def validate_file(
         df["Validation Status"] == "ERROR"
     ].copy()
 
-    # --------------------------------------------------
-    # SALESFORCE EXPORT
-    # --------------------------------------------------
+
 
     valid_df = valid_df.rename(
         columns=salesforce_mapping
@@ -299,9 +257,7 @@ def validate_file(
         encoding="utf-8-sig"
     )
 
-    # --------------------------------------------------
-    # ERROR XLSX
-    # --------------------------------------------------
+
 
     error_df.to_excel(
         error_xlsx,
@@ -341,9 +297,6 @@ def validate_file(
 
     wb.save(error_xlsx)
 
-    # --------------------------------------------------
-    # RETURN
-    # --------------------------------------------------
 
     return {
         "total_rows": len(df),
