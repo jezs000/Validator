@@ -6,8 +6,6 @@ import pandas as pd
 import yaml
 
 from dateutil.parser import parse
-from openpyxl import load_workbook
-from openpyxl.styles import PatternFill
 from schwifty import IBAN
 
 
@@ -91,29 +89,36 @@ def validate_row(row, df_columns, required_columns, valid_currencies):
         if is_empty(row[col]):
             errors.append(f"Missing: {col}")
 
-    # Field-specific validation
-    if not is_valid_date(row["Issue Date"]):
-        errors.append("Invalid Issue Date")
+    # Field-specific validation ONLY if column is required
+    if "Issue Date" in required_columns:
+        if not is_valid_date(row["Issue Date"]):
+            errors.append("Invalid Issue Date")
 
-    if not is_valid_date(row["Due Date"]):
-        errors.append("Invalid Due Date")
+    if "Due Date" in required_columns:
+        if not is_valid_date(row["Due Date"]):
+            errors.append("Invalid Due Date")
 
-    if not is_valid_ico(row["Vendor Company ID"]):
-        errors.append("Invalid ICO")
+    if "Vendor Company ID" in required_columns:
+        if not is_valid_ico(row["Vendor Company ID"]):
+            errors.append("Invalid ICO")
 
-    if "Vendor VAT Number" in df_columns and not pd.isna(row["Vendor VAT Number"]):
-        if not is_valid_dic(row["Vendor VAT Number"]):
-            errors.append("Invalid DIC")
+    if "Vendor VAT Number" in required_columns and "Vendor VAT Number" in df_columns:
+        if not pd.isna(row["Vendor VAT Number"]):
+            if not is_valid_dic(row["Vendor VAT Number"]):
+                errors.append("Invalid DIC")
 
-    if not is_valid_amount(row["Total Amount"]):
-        errors.append("Invalid Amount")
+    if "Total Amount" in required_columns:
+        if not is_valid_amount(row["Total Amount"]):
+            errors.append("Invalid Amount")
 
-    if not is_valid_currency(row["Currency"], valid_currencies):
-        errors.append("Invalid Currency")
+    if "Currency" in required_columns:
+        if not is_valid_currency(row["Currency"], valid_currencies):
+            errors.append("Invalid Currency")
 
-    if "IBAN" in df_columns and not pd.isna(row["IBAN"]):
-        if not is_valid_iban(row["IBAN"]):
-            errors.append("Invalid IBAN")
+    if "IBAN" in required_columns and "IBAN" in df_columns:
+        if not pd.isna(row["IBAN"]):
+            if not is_valid_iban(row["IBAN"]):
+                errors.append("Invalid IBAN")
 
     status = "ERROR" if errors else "VALID"
     return status, "; ".join(errors)
@@ -134,13 +139,23 @@ def validate_dataframe(df, required_columns, valid_currencies):
 
 
 
-def validate_file(input_path: str, output_dir: str, config_path: str = "config.yaml"):
+def validate_file(
+    input_path: str,
+    output_dir: str,
+    config_path: str = "config.yaml",
+    required_columns_override=None
+):
+
 
     # Load config
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    required_columns = config["required_columns"]
+    if required_columns_override is not None and len(required_columns_override) > 0:
+        required_columns = required_columns_override
+    else:
+        required_columns = config["required_columns"]
+
     valid_currencies = config["valid_currencies"]
     salesforce_mapping = config["salesforce_mapping"]
 
