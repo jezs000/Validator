@@ -86,50 +86,54 @@ def is_valid_ico(value):
 def validate_row(row, df_columns, required_columns, valid_currencies):
     errors = []
 
-    # Required fields
+
     for col in required_columns:
         if is_empty(row[col]):
             errors.append(f"Missing: {col}")
 
-    # Field-specific validation ONLY if column is required
+
     if "Issue Date" in required_columns:
         if not is_valid_date(row["Issue Date"]):
             errors.append("Invalid Issue Date")
+
 
     if "Vendor Company ID" in required_columns:
         ico = str(row["Vendor Company ID"]).strip()
         if ico.startswith("0"):
             errors.append("ICO starts with zero – may be truncated in target system")
 
-    if "Due Date" in required_columns:
-        if not is_valid_date(row["Due Date"]):
-            errors.append("Invalid Due Date")
 
     if "Vendor Company ID" in required_columns:
         if not is_valid_ico(row["Vendor Company ID"]):
             errors.append("Invalid ICO")
+
 
     if "Vendor VAT Number" in required_columns and "Vendor VAT Number" in df_columns:
         if not pd.isna(row["Vendor VAT Number"]):
             if not is_valid_dic(row["Vendor VAT Number"]):
                 errors.append("Invalid DIC")
 
+
     if "Total Amount" in required_columns:
         if not is_valid_amount(row["Total Amount"]):
             errors.append("Invalid Amount")
 
+
     if "Currency" in required_columns:
         if not is_valid_currency(row["Currency"], valid_currencies):
             errors.append("Invalid Currency")
+
 
     if "IBAN" in required_columns and "IBAN" in df_columns:
         if not pd.isna(row["IBAN"]):
             if not is_valid_iban(row["IBAN"]):
                 errors.append("Invalid IBAN")
 
+
     if "Description" in df_columns:
         if len(str(row["Description"])) > 255:
             errors.append("Description too long (max 255 chars)")
+
 
     if "Vendor VAT Number" in df_columns:
         vat = str(row["Vendor VAT Number"]).strip()
@@ -137,22 +141,32 @@ def validate_row(row, df_columns, required_columns, valid_currencies):
             errors.append("VAT Number looks like ICO – possible field swap")
 
     status = "ERROR" if errors else "VALID"
-
-    if "Due Date" in required_columns:
-        if is_empty(row["Due Date"]) and not is_empty(row["Issue Date"]):
-            errors.append("Missing Due Date – consider using Issue Date as fallback")
-
     return status, "; ".join(errors)
 
 
 def validate_dataframe(df, required_columns, valid_currencies):
     statuses = []
     errors = []
+    filled_due_dates = []
 
-    dupes = df.duplicated(subset=["Vendor Company ID", "Total Amount", "Issue Date"], keep=False)
-    df.loc[dupes, "Validation Errors"] += "; Potential duplicate invoice"
 
-    for _, row in df.iterrows():
+    if "Validation Errors" not in df.columns:
+        df["Validation Errors"] = ""
+
+
+    if all(col in df.columns for col in ["Vendor Company ID", "Total Amount", "Issue Date"]):
+        dupes = df.duplicated(subset=["Vendor Company ID", "Total Amount", "Issue Date"], keep=False)
+        df.loc[dupes, "Validation Errors"] += "; Potential duplicate invoice"
+
+
+    for idx, row in df.iterrows():
+
+        # Auto-fill Due Date
+        if "Due Date" in required_columns:
+            if is_empty(row["Due Date"]) and not is_empty(row["Issue Date"]):
+                df.at[idx, "Due Date"] = row["Issue Date"]
+                filled_due_dates.append(idx)
+
         status, err = validate_row(row, df.columns, required_columns, valid_currencies)
         statuses.append(status)
         errors.append(err)
@@ -160,7 +174,7 @@ def validate_dataframe(df, required_columns, valid_currencies):
     df["Validation Status"] = statuses
     df["Validation Errors"] = errors
 
-    return df
+    return df, filled_due_dates
 
 
 
@@ -171,15 +185,15 @@ def validate_file(
     required_columns_override=None
 ):
 
-
     # Load config
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    if required_columns_override is not None and len(required_columns_override) > 0:
-        required_columns = required_columns_override
-    else:
-        required_columns = config["required_columns"]
+    required_columns = (
+        required_columns_override
+        if required_columns_override
+        else config["required_columns"]
+    )
 
     valid_currencies = config["valid_currencies"]
     salesforce_mapping = config["salesforce_mapping"]
@@ -190,6 +204,7 @@ def validate_file(
 
     valid_csv = output_dir / "salesforce_import.csv"
     error_xlsx = output_dir / "invoice_errors.xlsx"
+    due_filled_xlsx = output_dir / "due_date_filled.xlsx"
 
     # Load input Excel
     df = pd.read_excel(input_path)
@@ -200,7 +215,7 @@ def validate_file(
         raise ValueError(f"Missing columns: {missing_columns}")
 
     # Validate rows
-    df = validate_dataframe(df, required_columns, valid_currencies)
+    df, filled_due_dates = validate_dataframe(df, required_columns, valid_currencies)
 
     # Split valid/error
     valid_df = df[df["Validation Status"] == "VALID"].copy()
@@ -216,11 +231,19 @@ def validate_file(
     # Save error Excel
     error_df.to_excel(error_xlsx, index=False)
 
+    # Save Due Date auto-filled rows
+    if filled_due_dates:
+        df.loc[filled_due_dates].to_excel(due_filled_xlsx, index=False)
+        due_filled_path = str(due_filled_xlsx)
+    else:
+        due_filled_path = None
+
     return {
         "total_rows": len(df),
         "valid_rows": len(valid_df),
         "error_rows": len(error_df),
         "valid_csv": str(valid_csv),
         "error_xlsx": str(error_xlsx),
+        "due_date_filled": due_filled_path,
         "errors_dataframe": error_df
     }

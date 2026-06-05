@@ -66,3 +66,12 @@ if uploaded_file:
                 file_name="invoice_errors.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+
+        if result.get("due_date_filled"):
+            with open(result["due_date_filled"], "rb") as f:
+                st.download_button(
+                    "Stáhnout log doplněných splatností",
+                    data=f,
+                    file_name="due_date_filled.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
