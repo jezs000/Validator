@@ -3,7 +3,7 @@ OCR Invoice Validator
 ## Spustit aplikaci jedním klikem
 Klikněte zde pro otevření projektu v GitHub Codespaces:
 
-👉 [**Spustit v GitHub Codespaces**](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=jezs000%2FValidator)
+[**Spustit v GitHub Codespaces**](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=jezs000%2FValidator)
 Po otevření se automaticky vytvoří vývojové prostředí a aplikace bude připravena ke spuštění.
 
 
