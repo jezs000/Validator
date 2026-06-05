@@ -1,0 +1,17 @@
+{
+  "name": "OCR Invoice Validator",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "forwardPorts": [8501],
+  "postCreateCommand": "pip install -r requirements.txt",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
+}
