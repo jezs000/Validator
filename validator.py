@@ -24,6 +24,7 @@ def is_valid_date(value):
 
 
 def is_valid_amount(value):
+    value = str(value).replace(",", ".").replace(" ", "")
     try:
         return float(value) > 0
     except Exception:
@@ -31,7 +32,8 @@ def is_valid_amount(value):
 
 
 def is_valid_currency(value, valid_currencies):
-    return str(value).upper().strip() in valid_currencies
+    return str(value).strip().upper() in valid_currencies
+
 
 
 def is_valid_dic(value):
@@ -94,6 +96,11 @@ def validate_row(row, df_columns, required_columns, valid_currencies):
         if not is_valid_date(row["Issue Date"]):
             errors.append("Invalid Issue Date")
 
+    if "Vendor Company ID" in required_columns:
+        ico = str(row["Vendor Company ID"]).strip()
+        if ico.startswith("0"):
+            errors.append("ICO starts with zero – may be truncated in target system")
+
     if "Due Date" in required_columns:
         if not is_valid_date(row["Due Date"]):
             errors.append("Invalid Due Date")
@@ -120,12 +127,30 @@ def validate_row(row, df_columns, required_columns, valid_currencies):
             if not is_valid_iban(row["IBAN"]):
                 errors.append("Invalid IBAN")
 
+    if "Description" in df_columns:
+        if len(str(row["Description"])) > 255:
+            errors.append("Description too long (max 255 chars)")
+
+    if "Vendor VAT Number" in df_columns:
+        vat = str(row["Vendor VAT Number"]).strip()
+        if re.fullmatch(r"\d{8}", vat):
+            errors.append("VAT Number looks like ICO – possible field swap")
+
     status = "ERROR" if errors else "VALID"
+
+    if "Due Date" in required_columns:
+        if is_empty(row["Due Date"]) and not is_empty(row["Issue Date"]):
+            errors.append("Missing Due Date – consider using Issue Date as fallback")
+
     return status, "; ".join(errors)
+
 
 def validate_dataframe(df, required_columns, valid_currencies):
     statuses = []
     errors = []
+
+    dupes = df.duplicated(subset=["Vendor Company ID", "Total Amount", "Issue Date"], keep=False)
+    df.loc[dupes, "Validation Errors"] += "; Potential duplicate invoice"
 
     for _, row in df.iterrows():
         status, err = validate_row(row, df.columns, required_columns, valid_currencies)
