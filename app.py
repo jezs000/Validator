@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 from validator import validate_file
 import yaml
+import zipfile
 
 st.set_page_config(page_title="Invoice Validator", layout="wide")
 st.title("OCR Invoice Validator")
@@ -56,7 +57,8 @@ if uploaded_file:
                 "Stáhnout Salesforce CSV",
                 data=f,
                 file_name="salesforce_import.csv",
-                mime="text/csv"
+                mime="text/csv",
+                key="download_salesforce"
             )
 
         with open(result["error_xlsx"], "rb") as f:
@@ -64,7 +66,8 @@ if uploaded_file:
                 "Stáhnout Error Excel",
                 data=f,
                 file_name="invoice_errors.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_errors"
             )
 
         if result.get("due_date_filled"):
@@ -73,5 +76,24 @@ if uploaded_file:
                     "Stáhnout log doplněných splatností",
                     data=f,
                     file_name="due_date_filled.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_due_log"
                 )
+
+        zip_path = Path(temp_dir) / "validator_output.zip"
+
+        with zipfile.ZipFile(zip_path, "w") as zipf:
+            zipf.write(result["valid_csv"], arcname="salesforce_import.csv")
+            zipf.write(result["error_xlsx"], arcname="invoice_errors.xlsx")
+            if result.get("due_date_filled"):
+                zipf.write(result["due_date_filled"], arcname="due_date_filled.xlsx")
+
+        with open(zip_path, "rb") as f:
+            st.download_button(
+                "Stáhnout vše (ZIP)",
+                data=f,
+                file_name="validator_output.zip",
+                mime="application/zip",
+                key="download_zip"
+            )
+
