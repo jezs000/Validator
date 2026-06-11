@@ -208,6 +208,8 @@ def validate_file(
 
     # Load input Excel
     df = pd.read_excel(input_path)
+    if "Currency" in df.columns:
+        df["Currency"] = df["Currency"].astype(str).str.strip().str.upper()
 
     # Check missing columns
     missing_columns = [c for c in required_columns if c not in df.columns]
