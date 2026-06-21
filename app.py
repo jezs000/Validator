@@ -5,19 +5,23 @@ import pandas as pd
 from validator import validate_file
 import yaml
 import zipfile
+import os
+from business_rules.parser import load_local_rules, save_local_rules, clear_local_rules
+
+
+IS_LOCAL = "CODESPACES" not in os.environ
 
 st.set_page_config(page_title="Invoice Validator", layout="wide")
 st.title("OCR Invoice Validator")
 
 uploaded_file = st.file_uploader("Nahraj OCR export", type=["xlsx"])
 
+
 if uploaded_file:
 
-    # načteme sloupce z Excelu
     df_preview = pd.read_excel(uploaded_file)
     all_columns = list(df_preview.columns)
 
-    # načteme defaultní required_columns z configu
     with open("config.yaml", "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
     default_required = config["required_columns"]
@@ -42,7 +46,8 @@ if uploaded_file:
             result = validate_file(
                 input_path=str(input_file),
                 output_dir=temp_dir,
-                required_columns_override=selected_required
+                required_columns_override=selected_required,
+                custom_rules_text=custom_rules_text if IS_LOCAL else None
             )
 
         st.success("Hotovo")
@@ -96,4 +101,81 @@ if uploaded_file:
                 mime="application/zip",
                 key="download_zip"
             )
+custom_rules_text = None
+
+if IS_LOCAL:
+    st.subheader("Vlastní business rules")
+
+    if "rules_open" not in st.session_state:
+        st.session_state.rules_open = False
+
+    if st.button("Spravovat vlastní pravidla"):
+        st.session_state.rules_open = not st.session_state.rules_open
+
+    if st.session_state.rules_open:
+        st.info("Pravidla se ukládají pouze lokálně. Validátor je načítá automaticky.")
+
+        existing_rules = load_local_rules()
+
+        new_rules = st.text_area(
+            "Upravit pravidla:",
+            value=existing_rules,
+            height=200
+        )
+
+        colA, colB = st.columns(2)
+
+        if colA.button("💾 Uložit pravidla"):
+            save_local_rules(new_rules)
+            st.success("Pravidla byla uložena.")
+
+        if colB.button("🗑️ Smazat všechna pravidla"):
+            clear_local_rules()
+            st.warning("Všechna pravidla byla smazána.")
+
+
+        st.markdown("""
+        ### 📘 Jak psát vlastní business rules
+
+        Vlastní pravidla používají jednoduchý jazyk ve stylu:
+
+        ```
+        IF <sloupec> <operátor> <hodnota> THEN <ERROR|WARNING> "zpráva"
+        ```
+
+        #### ✨ Podporované operátory
+        - `==` … rovná se  
+        - `!=` … nerovná se  
+        - `<` a `>` … porovnání čísel  
+        - `IN [A, B, C]` … hodnota je v seznamu  
+        - `NOT IN [A, B, C]` … hodnota není v seznamu  
+        - `IS EMPTY` … prázdná hodnota  
+        - `IS NOT EMPTY` … neprázdná hodnota  
+
+        #### 🧠 Příklady pravidel
+        ```
+        IF Vendor Name == Buyer Name THEN ERROR "Dodavatel a odběratel jsou stejní"
+        IF Total Amount < 0 THEN ERROR "Částka nesmí být záporná"
+        IF Currency NOT IN ["CZK", "EUR", "USD"] THEN WARNING "Neobvyklá měna"
+        IF Description IS EMPTY THEN WARNING "Chybí popis"
+        ```
+
+        #### 💾 Ukládání pravidel
+        - klikni na **Uložit pravidla**  
+        - pravidla se uloží do `business_rules/local_rules.txt`  
+        - validátor je bude automaticky používat při každé validaci  
+
+        #### 🗑️ Mazání pravidel
+        - klikni na **Smazat všechna pravidla**  
+        - soubor se vyprázdní  
+        - validátor přestane pravidla používat  
+
+        ---
+        """)
+
+        custom_rules_text = new_rules
+
+else:
+    st.subheader("Vlastní business rules")
+    st.info("Pro přidání vlastních pravidel stáhněte aplikaci.")
 

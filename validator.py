@@ -8,11 +8,8 @@ import yaml
 from dateutil.parser import parse
 from schwifty import IBAN
 
-
-
-
-def is_empty(value):
-    return pd.isna(value) or str(value).strip() == ""
+from business_rules.rule_engine import apply_rules
+from business_rules.helpers import is_empty
 
 
 def is_valid_date(value):
@@ -24,9 +21,19 @@ def is_valid_date(value):
 
 
 def is_valid_amount(value):
-    value = str(value).replace(",", ".").replace(" ", "")
+    s = str(value).strip().replace(" ", "")
+
+    if "," in s and "." not in s:
+        s = s.replace(",", ".")
+
+    if "," in s and "." in s:
+        if s.rfind(",") > s.rfind("."):
+            s = s.replace(".", "").replace(",", ".")
+        else:
+            s = s.replace(",", "")
+
     try:
-        return float(value) > 0
+        return float(s) > 0
     except Exception:
         return False
 
@@ -35,11 +42,9 @@ def is_valid_currency(value, valid_currencies):
     return str(value).strip().upper() in valid_currencies
 
 
-
 def is_valid_dic(value):
     if is_empty(value):
         return False
-
     value = str(value).strip().upper()
     return bool(re.fullmatch(r"CZ\d{8,10}", value))
 
@@ -83,81 +88,87 @@ def is_valid_ico(value):
 
     return expected == digits[7]
 
-def validate_row(row, df_columns, required_columns, valid_currencies):
+
+
+def validate_row(row, df_columns, required_columns, valid_currencies, custom_rules):
     errors = []
 
-
+    # Required fields
     for col in required_columns:
         if is_empty(row[col]):
             errors.append(f"Missing: {col}")
 
-
+    # Issue Date
     if "Issue Date" in required_columns:
         if not is_valid_date(row["Issue Date"]):
             errors.append("Invalid Issue Date")
 
-
+    # ICO starting with zero
     if "Vendor Company ID" in required_columns:
         ico = str(row["Vendor Company ID"]).strip()
         if ico.startswith("0"):
             errors.append("ICO starts with zero – may be truncated in target system")
 
-
+    # ICO checksum
     if "Vendor Company ID" in required_columns:
         if not is_valid_ico(row["Vendor Company ID"]):
             errors.append("Invalid ICO")
 
-
+    # DIC
     if "Vendor VAT Number" in required_columns and "Vendor VAT Number" in df_columns:
         if not pd.isna(row["Vendor VAT Number"]):
             if not is_valid_dic(row["Vendor VAT Number"]):
                 errors.append("Invalid DIC")
 
-
+    # Amount
     if "Total Amount" in required_columns:
         if not is_valid_amount(row["Total Amount"]):
             errors.append("Invalid Amount")
 
-
+    # Currency
     if "Currency" in required_columns:
         if not is_valid_currency(row["Currency"], valid_currencies):
             errors.append("Invalid Currency")
 
-
+    # IBAN
     if "IBAN" in required_columns and "IBAN" in df_columns:
         if not pd.isna(row["IBAN"]):
             if not is_valid_iban(row["IBAN"]):
                 errors.append("Invalid IBAN")
 
-
+    # Description length
     if "Description" in df_columns:
         if len(str(row["Description"])) > 255:
             errors.append("Description too long (max 255 chars)")
 
-
+    # VAT looks like ICO
     if "Vendor VAT Number" in df_columns:
         vat = str(row["Vendor VAT Number"]).strip()
         if re.fullmatch(r"\d{8}", vat):
             errors.append("VAT Number looks like ICO – possible field swap")
 
+    # Apply custom business rules
+    if custom_rules:
+        rule_errors = apply_rules(row, custom_rules)
+        errors.extend(rule_errors)
+
     status = "ERROR" if errors else "VALID"
     return status, "; ".join(errors)
 
 
-def validate_dataframe(df, required_columns, valid_currencies):
+
+def validate_dataframe(df, required_columns, valid_currencies, custom_rules):
     statuses = []
     errors = []
     filled_due_dates = []
 
-
     if "Validation Errors" not in df.columns:
         df["Validation Errors"] = ""
 
-
+    # Detect duplicates
     if all(col in df.columns for col in ["Vendor Company ID", "Total Amount", "Issue Date"]):
         dupes = df.duplicated(subset=["Vendor Company ID", "Total Amount", "Issue Date"], keep=False)
         df.loc[dupes, "Validation Errors"] += "; Potential duplicate invoice"
-
 
     for idx, row in df.iterrows():
 
@@ -167,7 +178,7 @@ def validate_dataframe(df, required_columns, valid_currencies):
                 df.at[idx, "Due Date"] = row["Issue Date"]
                 filled_due_dates.append(idx)
 
-        status, err = validate_row(row, df.columns, required_columns, valid_currencies)
+        status, err = validate_row(row, df.columns, required_columns, valid_currencies, custom_rules)
         statuses.append(status)
         errors.append(err)
 
@@ -177,12 +188,12 @@ def validate_dataframe(df, required_columns, valid_currencies):
     return df, filled_due_dates
 
 
-
 def validate_file(
     input_path: str,
     output_dir: str,
     config_path: str = "config.yaml",
-    required_columns_override=None
+    required_columns_override=None,
+    custom_rules_text=None
 ):
 
     # Load config
@@ -198,6 +209,16 @@ def validate_file(
     valid_currencies = config["valid_currencies"]
     salesforce_mapping = config["salesforce_mapping"]
 
+    # Parse custom rules
+    from business_rules.parser import load_local_rules, parse_custom_rules
+
+    local_rules_text = load_local_rules()
+    local_rules = parse_custom_rules(local_rules_text)
+
+    ui_rules = parse_custom_rules(custom_rules_text) if custom_rules_text else []
+
+    custom_rules = local_rules + ui_rules
+
     # Prepare output
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True)
@@ -208,6 +229,7 @@ def validate_file(
 
     # Load input Excel
     df = pd.read_excel(input_path)
+
     if "Currency" in df.columns:
         df["Currency"] = df["Currency"].astype(str).str.strip().str.upper()
 
@@ -217,7 +239,7 @@ def validate_file(
         raise ValueError(f"Missing columns: {missing_columns}")
 
     # Validate rows
-    df, filled_due_dates = validate_dataframe(df, required_columns, valid_currencies)
+    df, filled_due_dates = validate_dataframe(df, required_columns, valid_currencies, custom_rules)
 
     # Split valid/error
     valid_df = df[df["Validation Status"] == "VALID"].copy()
