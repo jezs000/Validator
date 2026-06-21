@@ -10,7 +10,7 @@ from business_rules.parser import load_local_rules, save_local_rules, clear_loca
 
 
 IS_LOCAL = "CODESPACES" not in os.environ
-
+custom_rules_text = None
 st.set_page_config(page_title="Invoice Validator", layout="wide")
 st.title("OCR Invoice Validator")
 
@@ -101,7 +101,7 @@ if uploaded_file:
                 mime="application/zip",
                 key="download_zip"
             )
-custom_rules_text = None
+
 
 if IS_LOCAL:
     st.subheader("Vlastní business rules")

@@ -152,7 +152,10 @@ def validate_row(row, df_columns, required_columns, valid_currencies, custom_rul
         rule_errors = apply_rules(row, custom_rules)
         errors.extend(rule_errors)
 
-    status = "ERROR" if errors else "VALID"
+    # Rozdělit chyby na ERROR a WARNING
+    hard_errors = [e for e in errors if not e.startswith("Warning:")]
+    status = "ERROR" if hard_errors else "VALID"
+
     return status, "; ".join(errors)
 
 
